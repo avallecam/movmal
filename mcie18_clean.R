@@ -163,7 +163,7 @@ movi1 <- basal %>%
          #starts_with("vpl1_"),starts_with("vl1_")
          ends_with("_mes")
   ) %>% 
-  naniar::replace_with_na_all(condition = ~.x %in% c(-9,-1,"-1")) %>% 
+  replace_with_na_all(condition = ~.x %in% c(-9,-1,"-1")) %>% 
   mutate(village=str_replace(cod_enrol,"(..).+","\\1")) %>% #count(apa_smph)
   
   #ediciones post-primera_tabla_1
@@ -175,7 +175,19 @@ movi1 <- basal %>%
       escu_nivel %in% 1:2 ~ "primaria",
       escu_nivel %in% 3:4 ~ "secundaria",
       escu_nivel %in% 5:7 ~ "superior"
-      )) %>% 
+      ),
+    #corregir insect_sino
+    insect_sino = case_when(
+      insect_sino == 88 ~ NA_real_,
+      insect_sino == 2 ~ NA_real_, #ante incertidumbre
+      TRUE  ~ insect_sino
+      ),
+    #corregir insect_sino
+    mosq_empr1 = case_when(
+      mosq_empr1 == 88 ~ NA_real_,
+      TRUE  ~ mosq_empr1
+      )
+    ) %>% 
   
   #colapsar act_prin, sect_trab
   mutate(
@@ -203,7 +215,7 @@ movi1 <- basal %>%
       sect_trab == 99 ~ "Otro (especificar)"
     )) %>% 
   mutate(
-    sect_trab_oe = case_when(
+    sect_trab_oe_c = case_when(
       sect_trab_oe == "-2" ~ NA_character_,
       sect_trab_oe == "ADMINISTRATIVO" ~ "Oficina, profesional o personal gerencial",
       sect_trab_oe == "AVICULTURA" ~ "Ganadería",
@@ -215,7 +227,7 @@ movi1 <- basal %>%
       sect_trab_oe == "GUIA TURISTICA" ~ "Transporte y almacenamiento",
       sect_trab_oe == "INDEPENDIENTE" ~ "Oficina, profesional o personal gerencial",
       sect_trab_oe == "MANIOBRISTA" ~ "Construcción",
-      sect_trab_oe == "MATERO EN CC. FORESTAL" ~ "Ganadería",
+      sect_trab_oe == "MATERO EN CC. FORESTAL" ~ "Tala/Madera",
       sect_trab_oe == "MOTOTAXI" ~ "Transporte y almacenamiento",
       sect_trab_oe == "MOTOTAXISTA" ~ "Transporte y almacenamiento",
       sect_trab_oe == "OBRERO" ~ "Construcción",
@@ -226,7 +238,7 @@ movi1 <- basal %>%
       sect_trab_oe == "VIGILANTE" ~ "Limpieza, mantenimiento de edificios, terrenos",
     )
   ) %>% 
-  mutate(sect_trab_all=coalesce(!!! select(.,sect_trab_oe,sect_trab))) %>% 
+  mutate(sect_trab_all=coalesce(!!! select(.,sect_trab_oe_c,sect_trab))) %>% 
   mutate(sect_trab_all=if_else(sect_trab_all=="Otro (especificar)",
                                NA_character_,sect_trab_all)) %>% 
   mutate(
@@ -296,6 +308,8 @@ movi1 <- basal %>%
 # evaluar MOV1 ------------------------------------------------------------
 
 movi1 %>% glimpse()
+
+movi1 %>% count(sect_trab_oe,sect_trab_oe_c) %>% print(n=Inf)
 
 #revision de edad
 #conclusión: en fecha de nacimiento también han puesto fecha de encuesta
@@ -820,8 +834,8 @@ mcie %>% count(sum_1805_tc) %>% mutate(per=100*n/sum(n))
 #mcie %>% count(transporte) %>% mutate(per=100*n/sum(n))
 #mcie %>% count(caminando) %>% mutate(per=100*n/sum(n))
 
-mcie %>% count(out_1805_h) %>% mutate(per=100*n/sum(n))
-mcie %>% count(out_home_c) %>% mutate(per=100*n/sum(n))
+#mcie %>% count(out_1805_h) %>% mutate(per=100*n/sum(n))
+#mcie %>% count(out_home_c) %>% mutate(per=100*n/sum(n))
 mcie %>% count(malhist_12m) %>% mutate(per=100*n/sum(n))
 
 mcie %>% 
