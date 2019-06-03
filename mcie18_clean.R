@@ -27,6 +27,13 @@ basal %>% count(lugar_cita,lugar_cita_e,lugar_encu,lugar_encu_e) %>% arrange(n)
 
 # evaluar BASAL -----------------------------------------------------------
 
+#mosquiteros por sujeto o vivienda? no determinado
+basal %>% 
+  mutate(viv=str_replace(cod_enrol,"(.....).+","\\1")) %>% 
+  select(viv,mosq_cuan,conv_cant) %>% 
+  print(n=30)
+  
+
 #doble reporte de trabajo
 basal %>% filter(sect_trab==7 & !is.na(sect_trab_oe)) %>% select(sect_trab,sect_trab_oe)
 
@@ -40,6 +47,12 @@ basal %>% count(apa_tcel)
 basal %>% count(apa_smph)
 
 #explorar temporadas de viaje autoreportado
+basal %>% select(ends_with("_noches")) %>% 
+  gather(key,value) %>% 
+  replace_with_na(replace = list(value = "-1")) %>% 
+  mutate(lenght=str_replace(key,"(..).+","\\1")) %>% 
+  group_by(lenght) %>% 
+  skimr::skim()
 #noviembre-abril:creciente(11-04)
 #mayo-octubre:vaciante(05-10)
 basal %>% select(cod_enrol,ends_with("_mes")) %>% #select(matches("vr(\\d)_mes")) %>% 
@@ -76,11 +89,12 @@ miss_var_summary(basal)
 miss_summary(basal)
 #visdat::vis_miss(basal)
 
-# corregir valor perdido --------------------------------------------------
+# corregir valor perdido -sexo- --------------------------------------------------
 
 basal %>% filter(sexo==77) %>% select(cod_enrol,sexo,edad)
 
-read_rds("data/vivienda_zungarococha_gpsrino_20190318.rds") %>% filter(name=="ll029")
+read_rds("data/vivienda_zungarococha_gpsrino_20190318.rds") %>% 
+  filter(name=="ll029")
 
 read_rds("data/individuo_zungarococha_2018.rds") %>% 
   filter(str_detect(id,"LL029")) %>% 
@@ -166,9 +180,10 @@ movi1 <- basal %>%
   replace_with_na_all(condition = ~.x %in% c(-9,-1,"-1")) %>% 
   mutate(village=str_replace(cod_enrol,"(..).+","\\1")) %>% #count(apa_smph)
   
-  #ediciones post-primera_tabla_1
+  #ediciones post-primera_tabla_1 [mcie19-tab0-20190524.pdf]
   mutate(
     #corregir sexo segun censo (77: prefiere no responder)
+    #fuente: individuo_zungarococha_2018.rds (ver arriba)
     sexo = if_else(sexo==77,2,sexo),
     #colapsar nivel escolar
     escu_nivel_c = case_when(
@@ -797,6 +812,10 @@ mcie %>%
   #count(#mpuf_tran_c2,mpvf_tran_c2,
   #      mpxf_tran_c2) %>% 
   print(n=Inf)
+
+mcie %>% select(mpxf_dest_c2)
+basal %>% select(ends_with("_dest8u")) %>% 
+  gather(key,value) %>% count(value,sort = T) %>% print(n=30)
 
 #mcie %>% count(mpu_dest_c2,mpv_dest_c2) %>% print(n=Inf)
   
