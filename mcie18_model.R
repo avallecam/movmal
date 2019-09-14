@@ -3,6 +3,8 @@
 
 # proyecto: MCIE2018 tesis maestría
 # input: data/mcie19_20190522.rds
+# updat: data/mcie19_20190705.rds
+
 # output: table/mcie19_(...).xlsx
 # estatus: base limpia
 # objetivo: tabla 1-2-3
@@ -22,7 +24,8 @@ theme_set(theme_bw())
 
 # importar datos ----------------------------------------------------------
 
-mcie19 <- read_rds("data/mcie19_20190522.rds")
+#mcie19 <- read_rds("data/mcie19_20190522.rds")
+mcie19 <- read_rds("data/mcie19_20190705.rds")
 
 mcie19 %>% glimpse()
 
