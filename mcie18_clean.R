@@ -916,8 +916,8 @@ mcie_19 <- movi1 %>%
                     sum_0617_tc,sum_0617_sc,sum_0617_fc,
                     sum_1805_tc,sum_1805_sc,sum_1805_fc,
                     
-                    contains("_dest"),contains("_tran")
-                    #mpx_dest_c2:mpxf_tran_c2 #,contains("_tlu"),
+                    contains("_dest"),contains("_tran"),
+                    mpx_dest_c2:mpxf_tran_c2 #,contains("_tlu"),
                     
                     #transporte,
                     #caminando
@@ -946,7 +946,7 @@ movidicty <- read_rds("data/movmal-data_dictionary.rds") %>%
 
 mcie_19 %>% 
   #write_rds("data/mcie19_20190705.rds")
-  set_variable_labels(.labels = movidicty) %>% 
+  #set_variable_labels(.labels = movidicty) %>%
   write_rds("data/mcie19_20190913.rds")
 
 mcie_19 %>% 

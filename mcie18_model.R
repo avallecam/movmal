@@ -16,6 +16,9 @@
 library(tidyverse)
 library(compareGroups)
 library(broom)
+library(labelled)
+library(skimr)
+library(rlang)
 #skimr,psych,Hmisc
 
 rm(list = ls())
@@ -25,16 +28,22 @@ theme_set(theme_bw())
 # importar datos ----------------------------------------------------------
 
 #mcie19 <- read_rds("data/mcie19_20190522.rds")
-mcie19 <- read_rds("data/mcie19_20190705.rds")
+#mcie19 <- read_rds("data/mcie19_20190705.rds")
+mcie19 <- read_rds("data/mcie19_20190913.rds")
 
 mcie19 %>% glimpse()
 
+# data dictionary ---------------------------------------------------------
+
+mcie19 %>% look_for() %>% as_tibble()
+
 # identify exposure and outcome -------------------------------------------
 
-mcie19 %>% select(starts_with("sum_1805")) %>% skimr::skim()
-mcie19 %>% select(starts_with("malhist_12m")) %>% skimr::skim() #tiempo al último evento diagnosticado?
-mcie19 %>% select(oe_fieb1) %>% skimr::skim() # febriles como outcome?
-
+mcie19 %>% select(starts_with("sum_1805")) %>% skim()
+mcie19 %>% select(starts_with("malhist_12m")) %>% skim() #tiempo al último evento diagnosticado?
+mcie19 %>% select(oe_fieb1) %>% skim() # febriles como outcome?
+mcie19 %>% select(oe_fieb1) %>% look_for()
+mcie19 %>% count(oe_fieb1)
 #alternativas de Y
 # - tiempo al último evento diagnosticado
 # - proporción de febriles
@@ -49,21 +58,21 @@ naniar::miss_var_summary(mcie19)
 
 skimr::skim(mcie19) # visual
 psych::describe(mcie19 %>% select_if(is.numeric)) # skewness + kurtosis
-Hmisc::describe(mcie19) # smallest, highest, proportion, frequency, type-flexible
+#Hmisc::describe(mcie19) # smallest, highest, proportion, frequency, type-flexible
 
 mcie19 %>% 
   ggplot(aes(sample=edad)) + 
   stat_qq() +
   stat_qq_line()
 
+# https://stackoverflow.com/a/13609916/6702544
 mcie19 %>% 
   ggplot(aes(x=edad)) + 
-  geom_histogram()
-
-# data dictionary ---------------------------------------------------------
-
-#        kipuformas.com -> consultas -> catálogo de variables de estudio
-#        (https://kipuformas.com/consultas.php?Opc=15)
+  geom_histogram(aes(y=..density..)) +
+  #geom_density() +
+  stat_function(fun = dnorm, 
+                args = list(mean = mean(mcie19$edad,na.rm = T), 
+                            sd = sd(mcie19$edad,na.rm = T)))
 
 # tabla 1 -----------------------------------------------------------------
 
@@ -113,26 +122,43 @@ compareGroups(~ sect_trab_oe,
   
 # tabla 2: por grupos -----------------------------------------------------------------
 
-compareGroups(group ~ sexo + edad +
-                #num.visita + 
-                hto. + leuco. + 
-                abaston. + segment. + #neutrofilos
-                eosinof. + basofil. +
-                monocit. + linfocit. + plaqueta,
-              data = mcie19 %>% filter(num.visita=="1") #, byrow=T 
-              ,method = c(hto. = 2,
-                          leuco. = 2,
-                          abaston. = 2,
-                          segment. = 2,
-                          eosinof. = 2,
-                          monocit. = 2,
-                          linfocit. = 2, #cercana a normal
-                          plaqueta = 2,
-                          basofil.= 2, edad = 2
+
+compareGroups(malhist_12m ~ .,
+              data = mcie19 %>% select(-cod_enrol,-sect_trab_oe) #,byrow=T 
+              ,max.xlev = 20
+              ,method = c(conv_cant = 2,
+                          edad = 2,
+                          mosq_cuan = 2,
+                          mosq_dusc1 = 2,
+                          mosq_ertm1 = 2,
+                          mosq_tm1 = 2,
+                          mp_numv = 2,
+                          mpx_tlv_m = 2,
+                          mpxf_tlv_m = 2,
+                          sum_0005_f = 2,
+                          sum_0005_s = 2,
+                          sum_0005_t = 2,
+                          sum_0611_f = 2,
+                          sum_0611_s = 2,
+                          sum_0611_t = 2,
+                          sum_0617_f = 2,
+                          sum_0617_s = 2,
+                          sum_0617_t = 2,
+                          sum_1217_f = 2,
+                          sum_1217_s = 2,
+                          sum_1217_t = 2,
+                          sum_1805_f = 2,
+                          sum_1805_s = 2,
+                          sum_1805_t = 2,
+                          sum_1823_f = 2,
+                          sum_1823_s = 2,
+                          sum_1823_t = 2,
+                          tiem_domi = 2,
+                          vl_cuantos = 2#,
               )
 ) %>% 
-  createTable(show.all = F, show.n = F, show.p.mul = T) #%>% 
-#export2xls("table/z0-tab1_ind_r05.xls")
+  createTable(show.all = T, show.n = T,digits = 1,sd.type = 2,show.p.mul = F) %>% 
+  export2xls("table/mcie19-tab2.xls")
 
 # complete case analysis --------------------------------------------------
 

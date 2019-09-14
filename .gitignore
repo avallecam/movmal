@@ -2,3 +2,5 @@
 *.Rproj
 read_kipuformas.R
 .Rproj.user
+.Rhistory
+*.html
