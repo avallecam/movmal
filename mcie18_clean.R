@@ -8,20 +8,35 @@
 # extra: diccionario de datos
 #        kipuformas.com -> consultas -> catálogo de variables de estudio
 # producto: mcie19_20190522.rds mcie19_20190522.dta
+# actualiz: mcie19_20190705.rds
 
+# revisar:
+# edades!!!!
+# avanzado en proyecto spatial/tracking sección "#### 01.1 person descriptive"
+# (donde se cruzaron varias bases para recuperar edad y sexo)
+
+#'20190913
+#'liberamos respuestas en opción múltiple
+#'bloqueamos lineas donde select retira columnas que necesitamos
+#'
 # paquetes ----------------------------------------------------------------
 
 library(tidyverse)
 library(lubridate)
+library(labelled)
 library(haven)
 library(naniar)
+library(rlang)
+library(avallecam)
 #skimr,psych,Hmisc
 
 # importar BASAL (base cruda) -----------------------------------------------------
 
-basal <- read_csv("data-raw/encuestas/2da fase_basal/Forma_F02.csv",n_max = 427)
+#basal <- read_csv("data-raw/encuestas/2da fase_basal/Forma_F02.csv",n_max = 427)
+basal <- read_rds("data/fase2_kipuforma_F02_20190913.rds")
 #basal %>% visdat::vis_dat()
 basal %>% glimpse()
+#basal %>% look_for() %>% as_tibble()
 #basal %>% count(cod_encues)
 basal %>% count(lugar_cita,lugar_cita_e,lugar_encu,lugar_encu_e) %>% arrange(n)
 
@@ -292,6 +307,7 @@ movi1 <- basal %>%
   mutate_at(vars(starts_with("par"),starts_with("piso"),
                  starts_with("veh_"),starts_with("sect_otro_")),
             str_replace_na,"") %>% 
+  #20190913
   mutate(
     #par_c1 = coalesce(!!! select(.,starts_with("par"),-contains("_otr_e"))),
     par_c2 = paste(!!! select(.,starts_with("par"),-contains("_otr_e")),sep="."),
@@ -299,9 +315,9 @@ movi1 <- basal %>%
     piso_c2 = paste(!!! select(.,starts_with("piso"),-contains("_otr_e")),sep="."),
     veh_c2 = paste(!!! select(.,starts_with("veh"),-contains("_otr_e")),sep="."),
     sect_otro_c2 = paste(!!! select(.,starts_with("sect_otro"),-contains("_otr_e")),sep=".")
-  ) %>% 
-  #modificación temporal para explorar combinación o como independientes
-  select(-(sect_otro_1:sect_otro_11),-(veh_bici:par_otr)) %>% 
+  ) %>%
+  # #modificación temporal para explorar combinación o como independientes
+  # select(-(sect_otro_1:sect_otro_11),-(veh_bici:par_otr)) %>% 
   
   #cambiar tipo de variables
   mutate_at(.vars = vars(sexo,escu_sino,escu_nivel,act_prin,sect_trab,act_otra,
@@ -317,8 +333,9 @@ movi1 <- basal %>%
   #edad con dos outliers y missing
   #decisión: reemplazar por el dato de fecha encuesta - nacimiento
   mutate(edad=if_else(edad>200 | is.na(edad) | edad < 18, 
-                      interval(fec_nac, fec_encues) / years(1), edad )) %>% 
-  select(-fec_encues,-fec_nac)
+                      interval(fec_nac, fec_encues) / years(1), edad )#,
+         #crear edad según datos de nacimiento y toma de muestra
+         ) #%>% select(-fec_encues,-fec_nac)
 
 # evaluar MOV1 ------------------------------------------------------------
 
@@ -366,6 +383,8 @@ movi1 %>%
 
 # función rango horas ----------------------------------------------------------
 
+# disponible en library(avallecam)
+
 # contar horas (retorno - salida)
 # 04 rangos de 06 horas cada uno
 # - 06.00 - 11.59 (06, 07, 08, 09, 10, 11)
@@ -395,35 +414,35 @@ movi1 %>%
 #lógica del algoritmo:
 # si la hora (salida/retorno) está dentro del rango
 # realizar la resta respectiva par acada uno de los cuatro escenarios
-sum_range_h <- function(dt, lim_sal_h, lim_ret_h, obs_sal_h, obs_ret_h, prefix, suffix) {
-  
-  varname <- paste0(prefix, 
-                    if_else(lim_sal_h<10,str_c(0,lim_sal_h),str_c(lim_sal_h)), 
-                    if_else(lim_ret_h<10,str_c(0,lim_ret_h),str_c(lim_ret_h)), 
-                    suffix)
-  s_obs <- enquo(obs_sal_h)
-  r_obs <- enquo(obs_ret_h)
-  
-  dt %>% 
-    mutate(!!varname := NA_real_,
-           !!varname := if_else((!!r_obs<=lim_ret_h & !!r_obs>=lim_sal_h) & 
-                                  (!!s_obs>=lim_sal_h & !!s_obs<=lim_ret_h) & (!!r_obs>!!s_obs),
-                                (!!r_obs+1)-!!s_obs,
-                                if_else((!!r_obs<=lim_ret_h & !!r_obs>=lim_sal_h) & 
-                                          (!!s_obs>=lim_sal_h & !!s_obs<=lim_ret_h) & (!!s_obs>!!r_obs),
-                                        ((lim_ret_h+1)-!!s_obs) + ((!!r_obs+1)-lim_sal_h),
-                                        if_else((!!r_obs>lim_sal_h & !!r_obs<=lim_ret_h) & 
-                                                  (!!s_obs<lim_sal_h | !!s_obs>!!r_obs),
-                                                (!!r_obs+1)-lim_sal_h,
-                                                if_else((!!r_obs>lim_ret_h | !!r_obs<!!s_obs ) & 
-                                                          (!!s_obs>=lim_sal_h & !!s_obs<lim_ret_h),
-                                                        (lim_ret_h+1)-!!s_obs,
-                                                        if_else((!!r_obs>lim_ret_h) & 
-                                                                  (!!s_obs<lim_sal_h) & (!!r_obs>!!s_obs),
-                                                                (lim_ret_h+1)-lim_sal_h,
-                                                                NA_real_)))))
-    )
-}
+# sum_range_h <- function(dt, lim_sal_h, lim_ret_h, obs_sal_h, obs_ret_h, prefix, suffix) {
+#   
+#   varname <- paste0(prefix, 
+#                     if_else(lim_sal_h<10,str_c(0,lim_sal_h),str_c(lim_sal_h)), 
+#                     if_else(lim_ret_h<10,str_c(0,lim_ret_h),str_c(lim_ret_h)), 
+#                     suffix)
+#   s_obs <- enquo(obs_sal_h)
+#   r_obs <- enquo(obs_ret_h)
+#   
+#   dt %>% 
+#     mutate(!!varname := NA_real_,
+#            !!varname := if_else((!!r_obs<=lim_ret_h & !!r_obs>=lim_sal_h) & 
+#                                   (!!s_obs>=lim_sal_h & !!s_obs<=lim_ret_h) & (!!r_obs>!!s_obs),
+#                                 (!!r_obs+1)-!!s_obs,
+#                                 if_else((!!r_obs<=lim_ret_h & !!r_obs>=lim_sal_h) & 
+#                                           (!!s_obs>=lim_sal_h & !!s_obs<=lim_ret_h) & (!!s_obs>!!r_obs),
+#                                         ((lim_ret_h+1)-!!s_obs) + ((!!r_obs+1)-lim_sal_h),
+#                                         if_else((!!r_obs>lim_sal_h & !!r_obs<=lim_ret_h) & 
+#                                                   (!!s_obs<lim_sal_h | !!s_obs>!!r_obs),
+#                                                 (!!r_obs+1)-lim_sal_h,
+#                                                 if_else((!!r_obs>lim_ret_h | !!r_obs<!!s_obs ) & 
+#                                                           (!!s_obs>=lim_sal_h & !!s_obs<lim_ret_h),
+#                                                         (lim_ret_h+1)-!!s_obs,
+#                                                         if_else((!!r_obs>lim_ret_h) & 
+#                                                                   (!!s_obs<lim_sal_h) & (!!r_obs>!!s_obs),
+#                                                                 (lim_ret_h+1)-lim_sal_h,
+#                                                                 NA_real_)))))
+#     )
+# }
 
 # seleccion MCIE (exp y des) ----------------------------------------------------------
 #filtrar y limpiar desenlace y exposición
@@ -668,12 +687,13 @@ mcie <- basal %>%
     mpuf_dest_c2 = paste(!!! select(.,starts_with("mpuf_dest")),sep="."),
     mpvf_dest_c2 = paste(!!! select(.,starts_with("mpvf_dest")),sep=".")
     ) %>% 
-  #COALESCE destino de una y dos salidas
-  replace_with_na_at(vars(mpu_dest_c2,mpv_dest_c2),~.x %in% c(".......")) %>% 
-  mutate(mpx_dest_c2=coalesce(!!! select(.,mpu_dest_c2,mpv_dest_c2))) %>% 
-  replace_with_na_at(vars(mpuf_dest_c2,mpvf_dest_c2),~.x %in% c(".......")) %>% 
-  mutate(mpxf_dest_c2=coalesce(!!! select(.,mpuf_dest_c2,mpvf_dest_c2))) %>% 
-  select(-mpu_dest_c2,-mpv_dest_c2,-mpuf_dest_c2,-mpvf_dest_c2) %>% 
+  #20190913
+  # #COALESCE destino de una y dos salidas
+  replace_with_na_at(vars(mpu_dest_c2,mpv_dest_c2),~.x %in% c(".......")) %>%
+  mutate(mpx_dest_c2=coalesce(!!! select(.,mpu_dest_c2,mpv_dest_c2))) %>%
+  replace_with_na_at(vars(mpuf_dest_c2,mpvf_dest_c2),~.x %in% c(".......")) %>%
+  mutate(mpxf_dest_c2=coalesce(!!! select(.,mpuf_dest_c2,mpvf_dest_c2))) %>%
+  # select(-mpu_dest_c2,-mpv_dest_c2,-mpuf_dest_c2,-mpvf_dest_c2) %>% 
   #DENSTINOS
   
   #TIEMPO
@@ -689,7 +709,7 @@ mcie <- basal %>%
   mutate(mpxf_tlv_m=coalesce(!!! select(.,mpuf_tlv_m,mpvf_tlv_m))) %>% 
   mutate(mpx_tlu=coalesce(!!! select(.,mpu_tlu,mpv_tlu))) %>% 
   mutate(mpxf_tlu=coalesce(!!! select(.,mpuf_tlu,mpvf_tlu))) %>% 
-  select(-mpu_tlv_m,-mpv_tlv_m,-mpuf_tlv_m,-mpvf_tlv_m,-mpu_tlu,-mpv_tlu,-mpuf_tlu,-mpvf_tlu) %>% 
+  #select(-mpu_tlv_m,-mpv_tlv_m,-mpuf_tlv_m,-mpvf_tlv_m,-mpu_tlu,-mpv_tlu,-mpuf_tlu,-mpvf_tlu) %>% 
   #TIEMPO
   
   #TRANSPORTE
@@ -712,12 +732,13 @@ mcie <- basal %>%
     mpuf_tran_c2 = paste(!!! select(.,starts_with("mpuf_tran")),sep="."),
     mpvf_tran_c2 = paste(!!! select(.,starts_with("mpvf_tran")),sep=".")
   ) %>% 
-  #COALESCE transporte de una y dos salidas
-  replace_with_na_at(vars(mpu_tran_c2,mpv_tran_c2),~.x %in% c(".....")) %>% 
-  mutate(mpx_tran_c2=coalesce(!!! select(.,mpv_tran_c2,mpu_tran_c2))) %>% 
-  replace_with_na_at(vars(mpuf_tran_c2,mpvf_tran_c2),~.x %in% c(".....")) %>% 
-  mutate(mpxf_tran_c2=coalesce(!!! select(.,mpuf_tran_c2,mpvf_tran_c2))) %>% 
-  select(-mpu_tran_c2,-mpv_tran_c2,-mpuf_tran_c2,-mpvf_tran_c2) %>% 
+  #20190913
+  # #COALESCE transporte de una y dos salidas
+  replace_with_na_at(vars(mpu_tran_c2,mpv_tran_c2),~.x %in% c(".....")) %>%
+  mutate(mpx_tran_c2=coalesce(!!! select(.,mpv_tran_c2,mpu_tran_c2))) %>%
+  replace_with_na_at(vars(mpuf_tran_c2,mpvf_tran_c2),~.x %in% c(".....")) %>%
+  mutate(mpxf_tran_c2=coalesce(!!! select(.,mpuf_tran_c2,mpvf_tran_c2))) %>%
+  # select(-mpu_tran_c2,-mpv_tran_c2,-mpuf_tran_c2,-mpvf_tran_c2) %>% 
   #TRANSPORTE
   
   #categorizar transporte: caminar y bote o pequepeque son de mayor proporción
@@ -870,7 +891,7 @@ mcie %>%
   group_by(key) %>% 
   summarise(n=sum(value,na.rm = T)) %>% ungroup() %>% mutate(per=100*n/sum(n))
 
-# grabar MCIE (2019) --------------------------------------------------------
+# generar MCIE (2019) -----------------------------------------------------
 
 mcie_19 <- movi1 %>% 
   full_join(
@@ -895,10 +916,13 @@ mcie_19 <- movi1 %>%
                     sum_0617_tc,sum_0617_sc,sum_0617_fc,
                     sum_1805_tc,sum_1805_sc,sum_1805_fc,
                     
-                    mpx_dest_c2:mpxf_tran_c2 #,contains("_tlu"),
+                    contains("_dest"),contains("_tran")
+                    #mpx_dest_c2:mpxf_tran_c2 #,contains("_tlu"),
                     
                     #transporte,
                     #caminando
+                    
+                    #viaje largo o viaje corto?
     )
   ) %>% 
   
@@ -907,11 +931,28 @@ mcie_19 <- movi1 %>%
 
 mcie_19 %>% glimpse()
 
+# importar BASAL labels! --------------------------------------------------
+
+#ready to use with labelled::set_variable_labels()
+movidicty <- read_rds("data/movmal-data_dictionary.rds") %>%
+  select(nombre,etiqueta) %>%
+  distinct() %>%
+  filter(nombre %in% colnames(mcie_19)) %>%
+  rename(rowname=nombre) %>% 
+  pivot_wider(names_from = rowname,values_from = etiqueta) %>% 
+  as.list()
+
+# grabar MCIE (2019) --------------------------------------------------------
+
 mcie_19 %>% 
-  write_rds("data/mcie19_20190522.rds")
+  #write_rds("data/mcie19_20190705.rds")
+  set_variable_labels(.labels = movidicty) %>% 
+  write_rds("data/mcie19_20190913.rds")
 
 mcie_19 %>% 
   #transformar vectores chr a fct
-  mutate_if(is.character,as.factor) %>% 
+  #mutate_if(is.character,as.factor) %>% 
   #grabar en dta
-  haven::write_dta("data/mcie19_20190522.dta")
+  #haven::write_dta("data/mcie19_20190705.dta")
+  set_variable_labels(.labels = movidicty) %>% 
+  haven::write_dta("data/mcie19_20190913.dta")
