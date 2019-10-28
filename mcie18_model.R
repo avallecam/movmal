@@ -29,7 +29,8 @@ theme_set(theme_bw())
 
 #mcie19 <- read_rds("data/mcie19_20190522.rds")
 #mcie19 <- read_rds("data/mcie19_20190705.rds")
-mcie19 <- read_rds("data/mcie19_20190913.rds")
+#mcie19 <- read_rds("data/mcie19_20190913.rds")
+mcie19 <- read_rds("data/mcie19_20191012.rds")
 
 mcie19 %>% glimpse()
 
@@ -73,6 +74,106 @@ mcie19 %>%
   stat_function(fun = dnorm, 
                 args = list(mean = mean(mcie19$edad,na.rm = T), 
                             sd = sd(mcie19$edad,na.rm = T)))
+
+# _EPI-MODEL --------------------------------------------------------------
+
+mcie19_epi <- mcie19 %>% 
+  select(cod_enrol,edad,sexo,village,escu_nivel_c,
+         casa_tipo,
+         tiem_domi,mosq_cuan,insect_sino,
+         sect_trab_all_act_prin,sect_trab_all_act_prin_cat,
+         vpc_sino,vpl_sino,
+         sum_1805_fc,sum_1805_sc,sum_1805_tc,
+         mpu_dest1:mpu_dest8,mpuf_dest1:mpuf_dest8,
+         mpu_tran1:mpu_tran6,mpuf_tran1:mpuf_tran6,
+         mpx_tlv_m,mpxf_tlv_m,
+         malhist_12m) %>% 
+  mutate(sect_trab_all_act_prin=fct_infreq(sect_trab_all_act_prin)#,
+         #sect_trab_all_act_prin=fct_lump_min(sect_trab_all_act_prin,min = 5)
+         )
+
+skimr::skim(mcie19_epi) # visual
+psych::describe(mcie19_epi %>% select_if(is.numeric)) # skewness + kurtosis
+
+#mcie19_epi %>% glimpse()
+
+# __epi_tabla1 --------------------------------------------------------------
+
+compareGroups(~ .,
+              data = mcie19_epi %>% 
+                select(-cod_enrol,
+                       -(mpu_dest1:mpu_dest8),
+                       -(mpuf_dest1:mpuf_dest8),
+                       -(mpu_tran1:mpu_tran6),
+                       -(mpuf_tran1:mpuf_tran6),
+                       -mpx_tlv_m,-mpxf_tlv_m) 
+              ,byrow=T 
+              ,max.xlev = 20
+              ,method = c(
+                #conv_cant = 2,
+                edad = 2,
+                mosq_cuan = 1,
+                #mosq_dusc1 = 2,
+                #mosq_ertm1 = 2,
+                #mosq_tm1 = 2,
+                #mp_numv = 2,
+                # mpx_tlv_m = 2,
+                # mpxf_tlv_m = 2,
+                # fin de semana + semana = total
+                # sum_0005_f = 2, sum_0005_s = 2, sum_0005_t = 2,
+                # sum_0611_f = 2, sum_0611_s = 2, sum_0611_t = 2,
+                # sum_0617_f = 2, sum_0617_s = 2, sum_0617_t = 2,
+                # sum_1217_f = 2, sum_1217_s = 2, sum_1217_t = 2,
+                # sum_1805_f = 2, sum_1805_s = 2, sum_1805_t = 2,
+                # sum_1823_f = 2, sum_1823_s = 2, sum_1823_t = 2,
+                tiem_domi = 2#,
+                #vl_cuantos = 2#,
+              )
+) %>% 
+  createTable(show.all = T, show.n = T,digits = 1,sd.type = 2) %>% 
+  export2xls("table/mcie19-epi-tab1.xls")
+
+# __epi_tabla2 ------------------------------------------------------------
+
+compareGroups(malhist_12m ~ .,
+              data = mcie19_epi %>% 
+                select(-cod_enrol,-sect_trab_all_act_prin,
+                       -(mpu_dest1:mpu_dest8),
+                       -(mpuf_dest1:mpuf_dest8),
+                       -(mpu_tran1:mpu_tran6),
+                       -(mpuf_tran1:mpuf_tran6),
+                       -mpx_tlv_m,-mpxf_tlv_m) 
+              ,byrow=T 
+              ,max.xlev = 20
+              ,method = c(
+                #conv_cant = 2,
+                edad = 2,sexo=2,
+                mosq_cuan = 2,
+                #mosq_dusc1 = 2,
+                #mosq_ertm1 = 2,
+                #mosq_tm1 = 2,
+                #mp_numv = 2,
+                mpx_tlv_m = 2,
+                mpxf_tlv_m = 2,
+                # fin de semana + semana = total
+                # sum_0005_f = 2, sum_0005_s = 2, sum_0005_t = 2,
+                # sum_0611_f = 2, sum_0611_s = 2, sum_0611_t = 2,
+                # sum_0617_f = 2, sum_0617_s = 2, sum_0617_t = 2,
+                # sum_1217_f = 2, sum_1217_s = 2, sum_1217_t = 2,
+                # sum_1805_f = 2, sum_1805_s = 2, sum_1805_t = 2,
+                # sum_1823_f = 2, sum_1823_s = 2, sum_1823_t = 2,
+                tiem_domi = 2#,
+                #vl_cuantos = 2#,
+              )
+) %>% 
+  createTable(show.all = F, 
+              #show.n = T,
+              digits = 1,
+              show.ratio = TRUE,show.p.ratio = F,
+              sd.type = 2) #%>% 
+  export2xls("table/mcie19-epi-tab2.xls")
+
+# _BIO-MODEL --------------------------------------------------------------
 
 # tabla 1 -----------------------------------------------------------------
 
@@ -126,6 +227,7 @@ compareGroups(~ sect_trab_oe,
 compareGroups(malhist_12m ~ .,
               data = mcie19 %>% select(-cod_enrol,-sect_trab_oe) #,byrow=T 
               ,max.xlev = 20
+              ,byrow = T
               ,method = c(conv_cant = 2,
                           edad = 2,
                           mosq_cuan = 2,
@@ -157,7 +259,9 @@ compareGroups(malhist_12m ~ .,
                           vl_cuantos = 2#,
               )
 ) %>% 
-  createTable(show.all = T, show.n = T,digits = 1,sd.type = 2,show.p.mul = F) %>% 
+  createTable(show.all = T, show.n = T,
+              digits = 1,sd.type = 2,
+              show.p.mul = F) %>% 
   export2xls("table/mcie19-tab2.xls")
 
 # complete case analysis --------------------------------------------------

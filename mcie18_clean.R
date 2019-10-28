@@ -216,7 +216,8 @@ movi1 <- basal %>%
     mosq_empr1 = case_when(
       mosq_empr1 == 88 ~ NA_real_,
       TRUE  ~ mosq_empr1
-      )
+      ),
+    casa_tipo_cat = if_else(casa_tipo=="4","tipo_d","tipo_a_b_c")
     ) %>% 
   
   #colapsar act_prin, sect_trab
@@ -277,6 +278,27 @@ movi1 <- basal %>%
                                    "Desempleado",sect_trab_all_act_prin)) %>% 
   mutate(sect_trab_all_act_prin=if_else(str_detect(sect_trab_all_act_prin,"Empleado"),
                                         "Empleado",sect_trab_all_act_prin)) %>% 
+  mutate(
+    sect_trab_all_act_prin_cat=case_when(
+      sect_trab_all_act_prin=="Agricultura" ~ "outdoor",
+      sect_trab_all_act_prin=="Ama de casa" ~ "indoor",
+      sect_trab_all_act_prin=="Construcción" ~ "outdoor",
+      sect_trab_all_act_prin=="Desempleado" ~ "indoor",
+      sect_trab_all_act_prin=="Educación" ~ "indoor",
+      sect_trab_all_act_prin=="Empleado" ~ "indoor",
+      sect_trab_all_act_prin=="Estudiante" ~ "indoor",
+      sect_trab_all_act_prin=="Ganadería" ~ "outdoor",
+      sect_trab_all_act_prin=="Incapaz de trabajar" ~ "indoor",
+      sect_trab_all_act_prin=="Limpieza, mantenimiento de edificios, terrenos" ~ "indoor",
+      sect_trab_all_act_prin=="Oficina, profesional o personal gerencial" ~ "indoor",
+      sect_trab_all_act_prin=="Pesca" ~ "outdoor",
+      sect_trab_all_act_prin=="Servicios de comida" ~ "indoor",
+      sect_trab_all_act_prin=="Servicios de salud" ~ "indoor",
+      sect_trab_all_act_prin=="Tala/Madera" ~ "outdoor",
+      sect_trab_all_act_prin=="Transporte y almacenamiento" ~ "outdoor",
+      sect_trab_all_act_prin=="Ventas (negocios)" ~ "indoor"
+    )
+  ) %>% 
   #count(#sect_trab,sect_trab_oe,
   #      #sect_trab_all,
   #      #act_prin,
@@ -319,6 +341,10 @@ movi1 <- basal %>%
   # #modificación temporal para explorar combinación o como independientes
   # select(-(sect_otro_1:sect_otro_11),-(veh_bici:par_otr)) %>% 
   
+  #reemplazar valores digitados indicadores de valor perdido
+  naniar::replace_with_na_at(.vars = c("vpl_sino"),
+                             condition = ~.x %in% c("88")) %>% 
+  
   #cambiar tipo de variables
   mutate_at(.vars = vars(sexo,escu_sino,escu_nivel,act_prin,sect_trab,act_otra,
                          starts_with("casa_"),insect_sino,mosq_tiene,
@@ -341,7 +367,13 @@ movi1 <- basal %>%
 
 movi1 %>% glimpse()
 
+# categorización de "otros" sectores de trabajo
 movi1 %>% count(sect_trab_oe,sect_trab_oe_c) %>% print(n=Inf)
+# recategorizacion sect_trab_all_act_prin
+movi1 %>% count(sect_trab_all_act_prin,sect_trab_all_act_prin_cat) %>% arrange(sect_trab_all_act_prin_cat) %>% print(n=Inf)
+# flujo completo de re-categorizaciones con sector de trabajo + actividad principal
+movi1 %>% count(sect_trab,sect_trab_oe,sect_trab_oe_c,act_prin,sect_trab_all_act_prin,sect_trab_all_act_prin_cat) %>% print(n=Inf)
+
 
 #revision de edad
 #conclusión: en fecha de nacimiento también han puesto fecha de encuesta
@@ -927,16 +959,25 @@ mcie_19 <- movi1 %>%
   ) %>% 
   
   #homogenizar formatos
-  mutate_if(is.character,as.factor)
+  mutate_if(is.character,as.factor) %>% 
+  
+  #change level of outcome
+  mutate(malhist_12m=fct_relevel(malhist_12m,"sin","con"))
 
 mcie_19 %>% glimpse()
 
 # importar BASAL labels! --------------------------------------------------
 
+library(janitor)
+
 #ready to use with labelled::set_variable_labels()
 movidicty <- read_rds("data/movmal-data_dictionary.rds") %>%
   select(nombre,etiqueta) %>%
   distinct() %>%
+  #show the original variable name
+  mutate(etiqueta=str_c(nombre,":",etiqueta)) %>% 
+  #make janitor::clean_names to get labels on comparegroups
+  mutate(etiqueta=make_clean_names(etiqueta)) %>% 
   filter(nombre %in% colnames(mcie_19)) %>%
   rename(rowname=nombre) %>% 
   pivot_wider(names_from = rowname,values_from = etiqueta) %>% 
@@ -946,8 +987,8 @@ movidicty <- read_rds("data/movmal-data_dictionary.rds") %>%
 
 mcie_19 %>% 
   #write_rds("data/mcie19_20190705.rds")
-  #set_variable_labels(.labels = movidicty) %>%
-  write_rds("data/mcie19_20190913.rds")
+  set_variable_labels(.labels = movidicty) %>%
+  write_rds("data/mcie19_20191012.rds")
 
 mcie_19 %>% 
   #transformar vectores chr a fct
@@ -955,4 +996,4 @@ mcie_19 %>%
   #grabar en dta
   #haven::write_dta("data/mcie19_20190705.dta")
   set_variable_labels(.labels = movidicty) %>% 
-  haven::write_dta("data/mcie19_20190913.dta")
+  haven::write_dta("data/mcie19_20191012.dta")
