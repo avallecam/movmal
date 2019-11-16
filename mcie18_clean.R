@@ -217,7 +217,7 @@ movi1 <- basal %>%
       mosq_empr1 == 88 ~ NA_real_,
       TRUE  ~ mosq_empr1
       ),
-    casa_tipo_cat = if_else(casa_tipo=="4","tipo_d","tipo_a_b_c")
+    casa_tipo_cat = if_else(casa_tipo=="4","tipo_d","tipo_a_b_c",missing = NA_character_)
     ) %>% 
   
   #colapsar act_prin, sect_trab
@@ -271,13 +271,13 @@ movi1 <- basal %>%
   ) %>% 
   mutate(sect_trab_all=coalesce(!!! select(.,sect_trab_oe_c,sect_trab))) %>% 
   mutate(sect_trab_all=if_else(sect_trab_all=="Otro (especificar)",
-                               NA_character_,sect_trab_all)) %>% 
+                               NA_character_,sect_trab_all,missing = NA_character_)) %>% 
   mutate(
     sect_trab_all_act_prin=coalesce(!!! select(.,sect_trab_all,act_prin)),
     sect_trab_all_act_prin=if_else(str_detect(sect_trab_all_act_prin,"Desempleado"),
-                                   "Desempleado",sect_trab_all_act_prin)) %>% 
+                                   "Desempleado",sect_trab_all_act_prin,missing = NA_character_)) %>% 
   mutate(sect_trab_all_act_prin=if_else(str_detect(sect_trab_all_act_prin,"Empleado"),
-                                        "Empleado",sect_trab_all_act_prin)) %>% 
+                                        "Empleado",sect_trab_all_act_prin,missing = NA_character_)) %>% 
   mutate(
     sect_trab_all_act_prin_cat=case_when(
       sect_trab_all_act_prin=="Agricultura" ~ "outdoor",
@@ -297,7 +297,17 @@ movi1 <- basal %>%
       sect_trab_all_act_prin=="Tala/Madera" ~ "outdoor",
       sect_trab_all_act_prin=="Transporte y almacenamiento" ~ "outdoor",
       sect_trab_all_act_prin=="Ventas (negocios)" ~ "indoor"
-    )
+    ),
+    sect_trab_all_act_prin_nolump = case_when(
+      sect_trab_all_act_prin %in% c("Ama de casa",
+                                    "Agricultura",
+                                    "Pesca",
+                                    "Tala/Madera",
+                                    "Transporte y almacenamiento") ~ sect_trab_all_act_prin,
+      is.na(sect_trab_all_act_prin) ~ NA_character_,
+      TRUE ~ "Otros"
+    ),
+    sect_trab_all_act_prin_lump=fct_lump(sect_trab_all_act_prin,5)
   ) %>% 
   #count(#sect_trab,sect_trab_oe,
   #      #sect_trab_all,
@@ -353,13 +363,13 @@ movi1 <- basal %>%
                          vpc_sino,vpl_sino,village),
             .funs = as.factor) %>% 
   #transformar a año - tiempo en vivienda actual
-  mutate(tiem_domi = if_else(tiem_domi_u == "Meses",tiem_domi/12,tiem_domi)) %>% 
+  mutate(tiem_domi = if_else(tiem_domi_u == "Meses",tiem_domi/12,tiem_domi,missing = NA_real_)) %>% 
   select(-tiem_domi_u) %>% 
   
   #edad con dos outliers y missing
   #decisión: reemplazar por el dato de fecha encuesta - nacimiento
   mutate(edad=if_else(edad>200 | is.na(edad) | edad < 18, 
-                      interval(fec_nac, fec_encues) / years(1), edad )#,
+                      interval(fec_nac, fec_encues) / years(1), edad,missing = NA_real_)#,
          #crear edad según datos de nacimiento y toma de muestra
          ) #%>% select(-fec_encues,-fec_nac)
 
@@ -373,7 +383,10 @@ movi1 %>% count(sect_trab_oe,sect_trab_oe_c) %>% print(n=Inf)
 movi1 %>% count(sect_trab_all_act_prin,sect_trab_all_act_prin_cat) %>% arrange(sect_trab_all_act_prin_cat) %>% print(n=Inf)
 # flujo completo de re-categorizaciones con sector de trabajo + actividad principal
 movi1 %>% count(sect_trab,sect_trab_oe,sect_trab_oe_c,act_prin,sect_trab_all_act_prin,sect_trab_all_act_prin_cat) %>% print(n=Inf)
-
+#lump works
+movi1 %>% count(sect_trab_all_act_prin,sect_trab_all_act_prin_cat,sect_trab_all_act_prin_lump,sort = T)
+#no lump but thematic relevance works
+movi1 %>% count(sect_trab_all_act_prin,sect_trab_all_act_prin_cat,sect_trab_all_act_prin_nolump,sort = T)
 
 #revision de edad
 #conclusión: en fecha de nacimiento también han puesto fecha de encuesta
@@ -535,7 +548,7 @@ mcie <- basal %>%
   
   mutate(
     # si 0 -> missing ¿? -> solo una observación sin hora de retorno
-    mpu_hsal=if_else(mpu_hsal=="0",NA_character_,mpu_hsal),
+    mpu_hsal=if_else(mpu_hsal=="0",NA_character_,mpu_hsal,missing = NA_character_),
     # solo extraer la hora del formato aa:bb
     mpu_hsal_h=str_replace(mpu_hsal,"(..).+","\\1") %>% as.numeric(),
     mpu_hret_h=str_replace(mpu_hret,"(..).+","\\1") %>% as.numeric(),
@@ -619,7 +632,7 @@ mcie <- basal %>%
   #SD: UNA salida x semana
   
   mutate(
-    mpuf_hsal=if_else(mpuf_hsal=="0",NA_character_,mpuf_hsal),
+    mpuf_hsal=if_else(mpuf_hsal=="0",NA_character_,mpuf_hsal,missing = NA_character_),
     mpuf_hsal_h=str_replace(mpuf_hsal,"(..).+","\\1") %>% as.numeric(),
     mpuf_hret_h=str_replace(mpuf_hret,"(..).+","\\1") %>% as.numeric()#,
     #mpuf_hret_h=if_else(mpuf_hret_h<mpuf_hsal_h,24+mpuf_hret_h,mpuf_hret_h),
@@ -814,26 +827,26 @@ mcie <- basal %>%
   ) %>% 
   ungroup() %>% 
   mutate(
-    sum_0611_tc=if_else(sum_0611_t>0,"si","no"),
-    sum_1217_tc=if_else(sum_1217_t>0,"si","no"),
-    sum_1823_tc=if_else(sum_1823_t>0,"si","no"),
-    sum_0005_tc=if_else(sum_0005_t>0,"si","no"),
-    sum_0617_tc=if_else(sum_0617_t>0,"si","no"),
-    sum_1805_tc=if_else(sum_1805_t>0,"si","no"),
+    sum_0611_tc=if_else(sum_0611_t>0,"si","no",missing = NA_character_),
+    sum_1217_tc=if_else(sum_1217_t>0,"si","no",missing = NA_character_),
+    sum_1823_tc=if_else(sum_1823_t>0,"si","no",missing = NA_character_),
+    sum_0005_tc=if_else(sum_0005_t>0,"si","no",missing = NA_character_),
+    sum_0617_tc=if_else(sum_0617_t>0,"si","no",missing = NA_character_),
+    sum_1805_tc=if_else(sum_1805_t>0,"si","no",missing = NA_character_),
     
-    sum_0611_sc=if_else(sum_0611_s>0,"si","no"),
-    sum_1217_sc=if_else(sum_1217_s>0,"si","no"),
-    sum_1823_sc=if_else(sum_1823_s>0,"si","no"),
-    sum_0005_sc=if_else(sum_0005_s>0,"si","no"),
-    sum_0617_sc=if_else(sum_0617_s>0,"si","no"),
-    sum_1805_sc=if_else(sum_1805_s>0,"si","no"),
+    sum_0611_sc=if_else(sum_0611_s>0,"si","no",missing = NA_character_),
+    sum_1217_sc=if_else(sum_1217_s>0,"si","no",missing = NA_character_),
+    sum_1823_sc=if_else(sum_1823_s>0,"si","no",missing = NA_character_),
+    sum_0005_sc=if_else(sum_0005_s>0,"si","no",missing = NA_character_),
+    sum_0617_sc=if_else(sum_0617_s>0,"si","no",missing = NA_character_),
+    sum_1805_sc=if_else(sum_1805_s>0,"si","no",missing = NA_character_),
     
-    sum_0611_fc=if_else(sum_0611_f>0,"si","no"),
-    sum_1217_fc=if_else(sum_1217_f>0,"si","no"),
-    sum_1823_fc=if_else(sum_1823_f>0,"si","no"),
-    sum_0005_fc=if_else(sum_0005_f>0,"si","no"),
-    sum_0617_fc=if_else(sum_0617_f>0,"si","no"),
-    sum_1805_fc=if_else(sum_1805_f>0,"si","no")
+    sum_0611_fc=if_else(sum_0611_f>0,"si","no",missing = NA_character_),
+    sum_1217_fc=if_else(sum_1217_f>0,"si","no",missing = NA_character_),
+    sum_1823_fc=if_else(sum_1823_f>0,"si","no",missing = NA_character_),
+    sum_0005_fc=if_else(sum_0005_f>0,"si","no",missing = NA_character_),
+    sum_0617_fc=if_else(sum_0617_f>0,"si","no",missing = NA_character_),
+    sum_1805_fc=if_else(sum_1805_f>0,"si","no",missing = NA_character_)
   )
 
 # _dest destino ?????? (categorizar, simplificar)
@@ -997,3 +1010,9 @@ mcie_19 %>%
   #haven::write_dta("data/mcie19_20190705.dta")
   set_variable_labels(.labels = movidicty) %>% 
   haven::write_dta("data/mcie19_20191012.dta")
+
+
+# missings? ---------------------------------------------------------------
+
+mcie_19 %>% vis_miss()
+mcie_19 %>% filter(is.na(edad)) %>% glimpse()
