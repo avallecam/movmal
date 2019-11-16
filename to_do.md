@@ -19,24 +19,24 @@
 (X) dag: agregar sexo!
 (X) tabla 1: exposición y demás del DAG
 (X) tabla 1: agregar edad x etapas de vida -> evaluar linealidad!
-(X) tabla 1: fct_lump a 5 categorías en `sect_trab_all_act_prin_cat`
-( ) tabla 1: redactar
-
-( ) tabla 2.1: bivariado
-( ) tabla 2.2: toda la gama de exposiciones o rango de horas - _fc, _sc, _tc
-( ) tabla 2.3: analizar mediadores!
-
-( ) missing n=1 -> NN152-1 (REVISAR CUESTIONARIO EN FÍSICO)
+(X) tabla 1: fct_lump a 5 categorías en `sect_trab_all_act_prin_lump`
 (X) corregir re-categorización de trabajo: incapaz y desempleo -> missing: No realizado - discutir
-( ) corregir mes de viaje a categórico ordinal
+(X) elegir qué categorias reordernar ascendentemente!
+( ) tabla 1: redactar
+( ) add `epi_tidysimple_m` to `avallecam` u optimizar tu procedimiento
 
-
+(X) tabla 2.1: bivariado
+(X) tabla 2.2: toda la gama de exposiciones o rango de horas - _fc, _sc, _tc
+( ) tabla 2.3: analizar mediadores!
 ( ) crear dibujo de creación de variable de horas!
 
 ( ) separar tab2 en variables generales + movimiento (detallar en tabla) _resaltadas: transporte, destino y lejania_ [mediadores]
 
+( ) missing n=1 -> NN152-1 (REVISAR CUESTIONARIO EN FÍSICO) + PERDIDAS en viajes + epi_tabla3/missing analysis/
+
+( ) corregir mes de viaje a categórico ordinal
+
 ( ) analizar bivariados: redactar resultados tab1 y tab2 -> presentar!
-( ) elegir qué categorias reordernar ascendentemente!
 
 ( ) correr modelo bio
-( ) EPI: analizar d-separation between exposure and outcome
+( ) EPI: analizar d-separation between exposure and outcome (figuras/cómo actuar)
