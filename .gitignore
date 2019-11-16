@@ -1,4 +1,7 @@
-*/*
+data/*
+data-raw/*
+notrack/*
+table/*
 *.Rproj
 read_kipuformas.R
 .Rproj.user

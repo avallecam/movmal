@@ -19,6 +19,8 @@ library(broom)
 library(labelled)
 library(skimr)
 library(rlang)
+library(janitor)
+library(avallecam)
 #skimr,psych,Hmisc
 
 rm(list = ls())
@@ -74,6 +76,22 @@ mcie19 %>%
   stat_function(fun = dnorm, 
                 args = list(mean = mean(mcie19$edad,na.rm = T), 
                             sd = sd(mcie19$edad,na.rm = T)))
+
+# linealidad --------------------------------------------------------------
+# concluimos que si hay linealidad
+
+mcie19 %>% 
+  select(edad,malhist_12m) %>% 
+  mutate(edad_cat=cut(edad,breaks = 4,include.lowest = T)) %>% 
+  tabyl(edad_cat,malhist_12m) %>% 
+  adorn_2x2()
+
+mcie19 %>% 
+  select(edad,malhist_12m) %>% 
+  mutate(edad_cat=cut(edad,breaks = 3,include.lowest = T)) %>% 
+  filter(!is.na(edad)) %>% 
+  ggplot(aes(edad_cat,fill=malhist_12m)) +
+  geom_bar(position = position_fill())
 
 # _EPI-MODEL --------------------------------------------------------------
 
