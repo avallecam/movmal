@@ -307,7 +307,8 @@ movi1 <- basal %>%
       is.na(sect_trab_all_act_prin) ~ NA_character_,
       TRUE ~ "Otros"
     ),
-    sect_trab_all_act_prin_lump=fct_lump(sect_trab_all_act_prin,5)
+    sect_trab_all_act_prin_prelump=fct_infreq(sect_trab_all_act_prin),
+    sect_trab_all_act_prin_lump=fct_lump(sect_trab_all_act_prin_prelump,5)
   ) %>% 
   #count(#sect_trab,sect_trab_oe,
   #      #sect_trab_all,
@@ -384,6 +385,7 @@ movi1 %>% count(sect_trab_all_act_prin,sect_trab_all_act_prin_cat) %>% arrange(s
 # flujo completo de re-categorizaciones con sector de trabajo + actividad principal
 movi1 %>% count(sect_trab,sect_trab_oe,sect_trab_oe_c,act_prin,sect_trab_all_act_prin,sect_trab_all_act_prin_cat) %>% print(n=Inf)
 #lump works
+movi1 %>% count(sect_trab_all_act_prin_lump)
 movi1 %>% count(sect_trab_all_act_prin,sect_trab_all_act_prin_cat,sect_trab_all_act_prin_lump,sort = T)
 #no lump but thematic relevance works
 movi1 %>% count(sect_trab_all_act_prin,sect_trab_all_act_prin_cat,sect_trab_all_act_prin_nolump,sort = T)
