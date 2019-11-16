@@ -55,7 +55,7 @@ mcie19 %>% count(oe_fieb1)
 #http://juliejosse.com/wp-content/uploads/2018/06/DataAnalysisMissingR.html
 
 #naniar::gg_miss_var(mcie19)
-naniar::miss_var_summary(mcie19)
+naniar::miss_var_summary(mcie19) %>% filter(n_miss>0) %>% print_inf()
 
 # distribuciones ----------------------------------------------------------
 
@@ -97,18 +97,18 @@ mcie19 %>%
 
 mcie19_epi <- mcie19 %>% 
   select(cod_enrol,edad,sexo,village,escu_nivel_c,
-         casa_tipo,
+         casa_tipo,casa_tipo_cat,
          tiem_domi,mosq_cuan,insect_sino,
-         sect_trab_all_act_prin,sect_trab_all_act_prin_cat,
+         sect_trab_all_act_prin,sect_trab_all_act_prin_lump,sect_trab_all_act_prin_cat,
          vpc_sino,vpl_sino,
          sum_1805_fc,sum_1805_sc,sum_1805_tc,
+         sum_0617_fc,sum_0617_sc,sum_0617_tc,
          mpu_dest1:mpu_dest8,mpuf_dest1:mpuf_dest8,
          mpu_tran1:mpu_tran6,mpuf_tran1:mpuf_tran6,
          mpx_tlv_m,mpxf_tlv_m,
          malhist_12m) %>% 
-  mutate(sect_trab_all_act_prin=fct_infreq(sect_trab_all_act_prin)#,
-         #sect_trab_all_act_prin=fct_lump_min(sect_trab_all_act_prin,min = 5)
-         )
+  mutate(sect_trab_all_act_prin=fct_infreq(sect_trab_all_act_prin), #ordenar por freq
+         edad_escala5=edad/5) # escalar edad
 
 skimr::skim(mcie19_epi) # visual
 psych::describe(mcie19_epi %>% select_if(is.numeric)) # skewness + kurtosis
@@ -124,7 +124,7 @@ compareGroups(~ .,
                        -(mpuf_dest1:mpuf_dest8),
                        -(mpu_tran1:mpu_tran6),
                        -(mpuf_tran1:mpuf_tran6),
-                       -mpx_tlv_m,-mpxf_tlv_m) 
+                       -mpx_tlv_m,-mpxf_tlv_m,-edad_escala5) 
               ,byrow=T 
               ,max.xlev = 20
               ,method = c(
@@ -155,12 +155,12 @@ compareGroups(~ .,
 
 compareGroups(malhist_12m ~ .,
               data = mcie19_epi %>% 
-                select(-cod_enrol,-sect_trab_all_act_prin,
+                select(-cod_enrol,-sect_trab_all_act_prin,-sect_trab_all_act_prin_lump,
                        -(mpu_dest1:mpu_dest8),
                        -(mpuf_dest1:mpuf_dest8),
                        -(mpu_tran1:mpu_tran6),
                        -(mpuf_tran1:mpuf_tran6),
-                       -mpx_tlv_m,-mpxf_tlv_m) 
+                       -mpx_tlv_m,-mpxf_tlv_m,-edad_escala5) 
               ,byrow=T 
               ,max.xlev = 20
               ,method = c(
@@ -187,13 +187,126 @@ compareGroups(malhist_12m ~ .,
   createTable(show.all = F, 
               #show.n = T,
               digits = 1,
-              show.ratio = TRUE,show.p.ratio = F,
-              sd.type = 2) #%>% 
+              #show.ratio = TRUE,
+              show.p.ratio = F,
+              sd.type = 2) %>% 
   export2xls("table/mcie19-epi-tab2.xls")
+
+# __epi_tabla3 ------------------------------------------------------------
+
+# ___missing analysis --------------------------------------------------------
+
+mcie19_epi %>% naniar::miss_var_summary() %>% filter(n_miss>0) %>% print_inf()
+# viajes 15-18% valores perdidos
+# mirar cuestionarios!
+
+# ___complete case analysis --------------------------------------------------
+
+mcie19_cc <- mcie19_epi %>% 
+  select(edad_escala5,sexo,sect_trab_all_act_prin_cat,
+         vpc_sino,vpl_sino,sum_1805_tc,sum_0617_tc,malhist_12m) %>% 
+  filter(complete.cases(.)) %>% 
+  mutate(outcome=as.numeric(malhist_12m)-1)
+n_full <- mcie19_epi %>% dim() %>% pluck(1)
+n_trim <- mcie19_cc %>% dim() %>% pluck(1)
+(1-(n_trim/n_full)) *100 #%perdida de datos
+
+mcie19_cc %>% glimpse()
+mcie19_cc %>% count(outcome,malhist_12m)
+
+# ___simple models --------------------------------------------------------
+
+glm_null <- glm(outcome ~ 1, data = mcie19_cc, family = poisson(link = "log"))
+glm_null %>% epi_tidymodel_pr()
+
+epi_tidymodel_up <- function(variable) {
+    update(glm_null, expr(~ . + !!variable))
+}
+
+simple_models <- mcie19_cc %>%   
+  colnames() %>% 
+  enframe(name = NULL) %>% 
+  filter(!value %in% c("outcome","malhist_12m")) %>% 
+  #slice(1:7) %>% 
+  mutate(variable=map(value,sym),
+         simple_rawm=map(variable,epi_tidymodel_up),
+         simple_tidy=map(simple_rawm,epi_tidymodel_pr)) %>% 
+  unnest(cols = c(simple_tidy)) %>% 
+  filter(term!="(Intercept)") %>% 
+  select(-value,-variable,-simple_rawm)
+
+# ___multiple model --------------------------------------------------------
+
+glm_full <- glm(outcome ~ edad_escala5 + sexo +
+                  sect_trab_all_act_prin_cat + 
+                  vpc_sino + vpl_sino + sum_1805_tc + sum_0617_tc
+                , data = mcie19_cc, family = poisson(link = "log"))
+multiple_model <- glm_full %>% epi_tidymodel_pr()
+
+
+# ___final table ----------------------------------------------------------
+
+simple_models %>%   
+  full_join(multiple_model,by = "term") %>% 
+  select(-contains("log.pr"),-contains("se.")) %>% 
+  writexl::write_xlsx("table/mcie19-epi-tab3.xls")
+
+
+# __epi_tabla4 -----------------------------------------------------------
+
+# ___complete case analysis --------------------------------------------------
+
+mcie19_cc <- mcie19_epi %>% 
+  select(edad_escala5,sexo,sect_trab_all_act_prin_cat,casa_tipo_cat,insect_sino,mosq_cuan,
+         vpc_sino,vpl_sino,sum_1805_tc,sum_0617_tc,malhist_12m) %>% 
+  filter(complete.cases(.)) %>% 
+  mutate(outcome=as.numeric(malhist_12m)-1)
+n_full <- mcie19_epi %>% dim() %>% pluck(1)
+n_trim <- mcie19_cc %>% dim() %>% pluck(1)
+(1-(n_trim/n_full)) *100 #%perdida de datos
+
+mcie19_cc %>% glimpse()
+mcie19_cc %>% count(outcome,malhist_12m)
+
+# ___simple models --------------------------------------------------------
+
+glm_null <- glm(outcome ~ 1, data = mcie19_cc, family = poisson(link = "log"))
+glm_null %>% epi_tidymodel_pr()
+
+simple_models <- mcie19_cc %>%   
+  colnames() %>% 
+  enframe(name = NULL) %>% 
+  filter(!value %in% c("outcome","malhist_12m")) %>% 
+  #slice(1:7) %>% 
+  mutate(variable=map(value,sym),
+         simple_rawm=map(variable,epi_tidymodel_up),
+         simple_tidy=map(simple_rawm,epi_tidymodel_pr)) %>% 
+  unnest(cols = c(simple_tidy)) %>% 
+  filter(term!="(Intercept)") %>% 
+  select(-value,-variable,-simple_rawm)
+
+# ___multiple model --------------------------------------------------------
+
+glm_full <- glm(outcome ~ edad_escala5 + sexo +
+                  sect_trab_all_act_prin_cat + casa_tipo_cat +
+                  insect_sino + mosq_cuan +
+                  vpc_sino + vpl_sino + sum_1805_tc + sum_0617_tc
+                , data = mcie19_cc, family = poisson(link = "log"))
+multiple_model <- glm_full %>% epi_tidymodel_pr()
+
+
+# ___final table ----------------------------------------------------------
+
+simple_models %>%   
+  full_join(multiple_model,by = "term") %>% 
+  select(-contains("log.pr"),-contains("se.")) %>% 
+  writexl::write_xlsx("table/mcie19-epi-tab4.xls")
+
+
 
 # _BIO-MODEL --------------------------------------------------------------
 
-# tabla 1 -----------------------------------------------------------------
+# __tabla 1 -----------------------------------------------------------------
 
 #library(compareGroups)
 
@@ -239,7 +352,7 @@ compareGroups(~ sect_trab_oe,
               ,max.xlev = 20) %>% 
   createTable()
   
-# tabla 2: por grupos -----------------------------------------------------------------
+# __tabla 2: por grupos -----------------------------------------------------------------
 
 
 compareGroups(malhist_12m ~ .,
@@ -282,33 +395,33 @@ compareGroups(malhist_12m ~ .,
               show.p.mul = F) %>% 
   export2xls("table/mcie19-tab2.xls")
 
-# complete case analysis --------------------------------------------------
+# __complete case analysis --------------------------------------------------
 
 #todos los missing están en falciparum!
 #mcie19 %>% 
-# select(group,x__1) %>% 
-#filter(is.na(x__1)) %>% count(group)
+# select(outcome,x__1) %>% 
+#filter(is.na(x__1)) %>% count(outcome)
 
 mcie19_cc <- mcie19 %>% filter(complete.cases(.))
 mcie19_cc %>% dim()
 
 mcie19_cc %>% glimpse()
-mcie19_cc %>% count(group)
+mcie19_cc %>% count(outcome)
 mcie19_cc_viv <- mcie19_cc %>% 
   filter(num.visita=="1") %>% 
-  filter(group!="pfal")
+  filter(outcome!="pfal")
 mcie19_cc_fal <- mcie19_cc %>% 
   filter(num.visita=="1") %>% 
-  filter(group!="pviv")
-mcie19_cc_viv %>% count(group)
-mcie19_cc_fal %>% count(group)
+  filter(outcome!="pviv")
+mcie19_cc_viv %>% count(outcome)
+mcie19_cc_fal %>% count(outcome)
 
-# exectute model --------------------------------------------------------
+# __exectute model --------------------------------------------------------
 
 #library(broom)
 
 #mcie19_cc_viv %>% count(hto.)
-glm.full <- glm(hto. ~ group + edad + sexo
+glm_full <- glm(hto. ~ outcome + edad + sexo
                 , data = mcie19_cc_viv, family = gaussian(link = "identity"))
-glm.full %>% tidy()
-glm.full %>% confint_tidy()
+glm_full %>% tidy()
+glm_full %>% confint_tidy()
