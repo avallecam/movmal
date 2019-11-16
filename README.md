@@ -2,7 +2,7 @@
 
 # Main question
 
-## Do human mobility is associated with malaria history during the last year at peri-urban communities?
+## Do human mobility is associated with malaria history during the last year at periurban communities?
 
 # DAG
 
