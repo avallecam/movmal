@@ -32,6 +32,6 @@ output:
 
 Andree Valle Campos
 
-__twitter/github:__ [@avallecam](https://twitter.com/avallecam)
+__twitter/github:__ [`@avallecam`](https://twitter.com/avallecam)
 
 __mail:__ avallecam@gmail.com

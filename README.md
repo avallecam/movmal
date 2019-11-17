@@ -35,8 +35,7 @@ Contact
 
 Andree Valle Campos
 
-**twitter/github:**
-\[@avallecam\](<a href="https://twitter.com/avallecam" class="uri">https://twitter.com/avallecam</a>)
+**twitter/github:** [`@avallecam`](https://twitter.com/avallecam)
 
 **mail:**
 <a href="mailto:avallecam@gmail.com" class="email">avallecam@gmail.com</a>
