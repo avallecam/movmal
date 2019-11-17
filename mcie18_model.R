@@ -137,16 +137,18 @@ mcie19 %>%
   select(-cod_enrol#,-week_x,-mpx_tlv_m
          ) %>% #colnames()
   #naniar::vis_miss()
-  # # HERE I WOULD NEED TO MAKE SHURE THAT OTHER OPTION WAS TAKEN!
+  # # PLAN A: HERE I WOULD NEED TO MAKE SHURE THAT OTHER OPTION WAS TAKEN!
   # select(contains("dest")) %>% 
   # distinct(mpu_dest2,mpu_dest1,mpu_dest5,mpu_dest8,mpu_dest4,mpu_dest3,mpu_dest7,
   #          #mpu_tran6,mpu_tran3,mpu_tran4,mpu_tran2,mpu_tran1,
   #          #mpx_tlv_m,
   #          .keep_all = T) %>% 
   # naniar::vis_miss()
-  # mutate_at(.vars = vars(starts_with("mpu_")),.funs = replace_na,"0") %>% 
+  # # PLAN B
+  # distinct() %>% 
+  # mutate_at(.vars = vars(starts_with("mpu_")),.funs = replace_na,"0") %>%
   compareGroups(formula = week_x ~ .,data = .,byrow = T,method = list(mpx_tlv_m=2)) %>% 
-  createTable(show.p.overall = F) %>% 
+  createTable(show.p.overall = T) %>% 
   export2xls("table/mcie19-epi-tab_week.xls")
 
 # _EPI-MODEL --------------------------------------------------------------
