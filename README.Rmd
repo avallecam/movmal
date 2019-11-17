@@ -32,6 +32,6 @@ output:
 
 Andree Valle Campos
 
-icon::fa('twitter') icon::fa('github') __@avallecam__ 
+__twitter/github:__ [@avallecam](https://twitter.com/avallecam)
 
-icon::fa("inbox") __avallecam@gmail.com__
+__mail:__ avallecam@gmail.com
