@@ -134,8 +134,8 @@ mcie19 %>%
   select(-variable,-new_value) %>% 
   pivot_wider(names_from = new_variable,values_from = value) %>% 
   mutate_at(.vars = vars(ends_with("_m")),.funs = as.numeric) %>% 
-  select(-cod_enrol#,-week_x,-mpx_tlv_m
-         ) %>% #colnames()
+  # select(-cod_enrol#,-week_x,-mpx_tlv_m
+  #        ) %>% #colnames()
   #naniar::vis_miss()
   # # PLAN A: HERE I WOULD NEED TO MAKE SHURE THAT OTHER OPTION WAS TAKEN!
   # select(contains("dest")) %>% 
@@ -144,11 +144,25 @@ mcie19 %>%
   #          #mpx_tlv_m,
   #          .keep_all = T) %>% 
   # naniar::vis_miss()
-  # # PLAN B
-  # distinct() %>% 
-  # mutate_at(.vars = vars(starts_with("mpu_")),.funs = replace_na,"0") %>%
-  compareGroups(formula = week_x ~ .,data = .,byrow = T,method = list(mpx_tlv_m=2)) %>% 
-  createTable(show.p.overall = T) %>% 
+  # PLAN B
+  distinct() %>%
+  mutate_at(.vars = vars(starts_with("mpu_")),.funs = replace_na,"0") %>%
+  compareGroups(formula = week_x ~ .,data = .,byrow = T,
+                method = list(
+                  mpu_dest1=2,
+                  mpu_dest2=2,
+                  mpu_dest3=2,
+                  mpu_dest4=2,
+                  mpu_dest5=2,
+                  mpu_dest7=2,
+                  mpu_dest8=2,
+                  mpu_tran1=2,
+                  mpu_tran2=2,
+                  mpu_tran3=2,
+                  mpu_tran4=2,
+                  mpu_tran6=2,
+                  mpx_tlv_m=2)) %>% 
+  createTable(show.p.overall = T) #%>% 
   export2xls("table/mcie19-epi-tab_week.xls")
 
 # _EPI-MODEL --------------------------------------------------------------
@@ -191,7 +205,7 @@ compareGroups(~ .,
               ,max.xlev = 20
               ,method = c(
                 #conv_cant = 2,
-                edad = 2,
+                #edad = 2,
                 mosq_cuan = 1,
                 #mosq_dusc1 = 2,
                 #mosq_ertm1 = 2,
