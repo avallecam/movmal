@@ -4,6 +4,18 @@ output:
     variant: markdown_github
 ---
 
+# ASTMH poster PDF link [here](https://github.com/avallecam/movmal/blob/master/poster/astmh_poster-ValleAA-20191118.pdf)
+
+# Contact
+
+Andree Valle Campos
+
+__twitter/github:__ [`@avallecam`](https://twitter.com/avallecam)
+
+__mail:__ avallecam@gmail.com
+
+--------------
+
 # MSc thesis project
 
 # Main question
@@ -27,6 +39,8 @@ output:
 ## d-connected variables
 
 ![Fig. 4](figure/04-mcie_dag-dconnected_variables.png)
+
+----------
 
 # Contact
 

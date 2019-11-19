@@ -1,3 +1,18 @@
+ASTMH poster PDF link [here](https://github.com/avallecam/movmal/blob/master/poster/astmh_poster-ValleAA-20191118.pdf)
+======================================================================================================================
+
+Contact
+=======
+
+Andree Valle Campos
+
+**twitter/github:** [`@avallecam`](https://twitter.com/avallecam)
+
+**mail:**
+<a href="mailto:avallecam@gmail.com" class="email">avallecam@gmail.com</a>
+
+------------------------------------------------------------------------
+
 MSc thesis project
 ==================
 
@@ -29,6 +44,8 @@ d-connected variables
 ---------------------
 
 ![Fig. 4](figure/04-mcie_dag-dconnected_variables.png)
+
+------------------------------------------------------------------------
 
 Contact
 =======
