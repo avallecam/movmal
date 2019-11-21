@@ -1,5 +1,5 @@
-ASTMH poster PDF link [here](https://github.com/avallecam/movmal/blob/master/poster/astmh_poster-ValleAA-20191118.pdf)
-======================================================================================================================
+ASTMH poster access [here](https://raw.githubusercontent.com/avallecam/movmal/master/poster/astmh_poster-ValleAA-20191118.jpg)
+==============================================================================================================================
 
 Contact
 =======
