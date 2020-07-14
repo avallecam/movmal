@@ -38,7 +38,7 @@ mcie19 %>% glimpse()
 
 # data dictionary ---------------------------------------------------------
 
-mcie19 %>% look_for() %>% as_tibble()
+mcie19 %>% look_for() %>% as_tibble() %>% avallecam::print_inf()
 
 # identify exposure and outcome -------------------------------------------
 
@@ -100,7 +100,7 @@ mcie19 %>%
   filter(!is.na(malhist_12m)) %>% 
   mutate(malhist_12m=fct_recode(malhist_12m,"Yes"="con","No"="sin")) %>% 
   count(malhist_12m,sum_0617_t,sum_1805_t,sort = T) %>% 
-  ggplot(aes(sum_0617_t,sum_1805_t,colour=malhist_12m,size=n)) +
+  ggplot(aes(x = sum_0617_t,y = sum_1805_t,colour=malhist_12m,size=n)) +
   geom_point(alpha=0.5) +
   facet_grid(~malhist_12m) +
   scale_size_continuous(range = c(3,8),breaks = c(1,10,25,50),labels = c(1,10,25,50)) +
@@ -119,35 +119,60 @@ mcie19 %>%
          mpx_tlv_m,mpxf_tlv_m, #04
          ) %>% 
   mutate_all(.funs = as.character) %>% 
+  
+  #' separate more than one variables inside one name
+  #' transport/destiny with time of the week
+  #' e.g.
+  #' variable   value week_x  new_variable
+  #' mpuf_tran6 6     weekend mpu_tran6   
+  #' mpxf_tlv_m 2     weekend mpx_tlv_m   
+  #' mpu_dest1  1     weekday mpu_dest1   
   pivot_longer(cols = -cod_enrol,names_to = "variable",values_to = "value") %>% 
   mutate(week_x=if_else(str_detect(variable,"f_"),"weekend","weekday")) %>% 
   filter(value!="") %>% 
   mutate(new_value=case_when(
     str_detect(variable,"_m") ~ value,
     TRUE ~ str_c(variable,"-",value)
-  ),
-  new_variable=if_else(
+    )) %>% 
+  mutate(new_variable=if_else(
     str_detect(variable,"f_"),str_replace(variable,"f_","_"),variable
-    )
-  ) %>%  
+    )) %>%  
   # count(new_variable) %>% print_inf()
   select(-variable,-new_value) %>% 
   pivot_wider(names_from = new_variable,values_from = value) %>% 
-  mutate_at(.vars = vars(ends_with("_m")),.funs = as.numeric) %>% 
-  # select(-cod_enrol#,-week_x,-mpx_tlv_m
-  #        ) %>% #colnames()
-  #naniar::vis_miss()
-  # # PLAN A: HERE I WOULD NEED TO MAKE SHURE THAT OTHER OPTION WAS TAKEN!
-  # select(contains("dest")) %>% 
-  # distinct(mpu_dest2,mpu_dest1,mpu_dest5,mpu_dest8,mpu_dest4,mpu_dest3,mpu_dest7,
-  #          #mpu_tran6,mpu_tran3,mpu_tran4,mpu_tran2,mpu_tran1,
-  #          #mpx_tlv_m,
-  #          .keep_all = T) %>% 
-  # naniar::vis_miss()
-  # PLAN B
+  #' close reshaping
+  #' 
+  #' plan: identify exactly when there really
+  #' exist "another alternative"
+  select(cod_enrol,week_x,
+         # contains("_dest"),
+         mpu_dest1,mpu_dest2,mpu_dest3,mpu_dest4,
+         mpu_dest5,mpu_dest7,mpu_dest8,
+         # contains("_tran"),
+         mpu_tran1,mpu_tran2,mpu_tran3,mpu_tran4,mpu_tran6,
+         everything()
+         ) %>% 
+  mutate(mpu_destx=coalesce(mpu_dest1,mpu_dest2,mpu_dest3,
+                            mpu_dest4,mpu_dest5,mpu_dest7,mpu_dest8),
+         mpu_destx=if_else(is.na(mpu_destx),mpu_destx,"x")) %>%
+  mutate(mpu_tranx=coalesce(mpu_tran1,mpu_tran2,mpu_tran3,
+                            mpu_tran4,mpu_tran6),
+         mpu_tranx=if_else(is.na(mpu_tranx),mpu_tranx,"x")) %>% 
+  mutate_at(.vars = vars(starts_with("mpu_")),
+            .funs = ~if_else(condition = is.na(.x),
+                             true = mpu_destx,
+                             false = .x)) %>% 
+  filter(!is.na(mpu_tranx)|!is.na(mpu_destx)) %>% 
+  select(-mpu_tranx,-mpu_destx) %>% 
+  #' close
+  #' 
   distinct() %>%
-  mutate_at(.vars = vars(starts_with("mpu_")),.funs = replace_na,"0") %>%
-  compareGroups(formula = week_x ~ .,data = .,byrow = T,
+  #' minutes as numeric
+  mutate_at(.vars = vars(ends_with("_m")),.funs = as.numeric) %>% 
+  #' replace missings with cero
+  # mutate_at(.vars = vars(starts_with("mpu_")),.funs = replace_na,"0") %>%
+  compareGroups(formula = week_x ~ .,data = .,
+                byrow = F,chisq.test.perm = TRUE,
                 method = list(
                   mpu_dest1=2,
                   mpu_dest2=2,
@@ -162,7 +187,7 @@ mcie19 %>%
                   mpu_tran4=2,
                   mpu_tran6=2,
                   mpx_tlv_m=2)) %>% 
-  createTable(show.p.overall = T) #%>% 
+  createTable(show.p.overall = T,show.n = T,digits = 1) %>% 
   export2xls("table/mcie19-epi-tab_week.xls")
 
 # _EPI-MODEL --------------------------------------------------------------
